@@ -8,15 +8,19 @@ def twist(mu):
     return -50*mu + 35
 
 def geometry_cosine():
-    r = np.linspace(0,np.pi,n)
+    r = np.linspace(0,np.pi,n+1)
     r = (1-np.cos(r))/2
     blen = R-r_hub
     r = r_hub + blen*r
-    return r
+    dr = r[1:]-r[:-1]
+    r = (r[1:]+r[:-1])/2
+    return r, dr
 
 def geometry_constant():
-    r = np.linspace(r_hub, R, n)
-    return  r
+    r = np.linspace(r_hub, R, n+1)
+    dr = r[1:] - r[:-1]
+    r = (r[1:] + r[:-1]) / 2
+    return  r,dr
 
 
 
@@ -27,7 +31,7 @@ def aero_coeffs(alpha,filename = 'ARAD8pct_polar.txt'):
     return cl, cd
 
 
-def BE_loads(a,ap,r,b,c):
+def BE_loads(a,ap,r,dr,b,c):
     Vtan = RPM*r*(1+ap)
     Vax = U0*(1-a)
     Vps= Vtan**2+Vax**2
@@ -38,11 +42,21 @@ def BE_loads(a,ap,r,b,c):
     D = 0.5*c*rho*Vps*cd
     Faz = L*np.sin(phi) - D*np.cos(phi)
     Fax = L*np.cos(phi) + D*np.sin(phi)
-
     return Fax,Faz
 
-def MT_induction(Fax,Faz,r,b,c,Glauert):
-    # CT = ()/()
+def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
+    CT = (Fax*nb*r)/(0.5*rho*U0**2*2*np.pi*r*dr)
+    ap = (Faz*nb)/(2*rho*(2*np.pi*r)*U0*(1-a)*r*omega)
+
+    a = 0.5 - 0.5*np.sqrt(1-CT)
+    if Glauert:
+        CT1 = 1.816
+        CT2 = 2*np.sqrt(CT1) - CT1
+        if CT>=CT2:
+            a = 1+ (CT-CT1)/(4*np.sqrt(CT1)-4)
+
+    if Prandlt:
+
     return a,ap
 
 
@@ -54,10 +68,11 @@ if __name__=='__main__':
         b_col = 46 #deg
         U0 = 60 #m/s
         RPM = 1200
+        omega=RPM*2*np.pi/60 #rad/s
         h = 2000 #m
+        nb = 3 #number of blades
         n = 50 #number of discretised blade elements
-        r_arr_cos = geometry_cosine()
-        r_arr_con = geometry_constant()
-        aero = np.genfromtxt('ARAD8pct_polar.txt',skip_header=2)
-        plt.scatter(aero[:,0],aero[:,1])
+        r_arr_cos,dr_cos = geometry_cosine()
+        r_arr_con,dr_con = geometry_constant()
+
 
