@@ -33,7 +33,7 @@ def aero_coeffs(alpha,filename = 'ARAD8pct_polar.txt'):
 
 def BE_loads(a,ap,r,dr,b,c):
     Vtan = RPM*r*(1+ap)
-    Vax = U0*(1-a)
+    Vax = U0*(1+a) #1-a
     Vps= Vtan**2+Vax**2
     phi = np.atan(Vax,Vtan)
     alpha = phi - b
@@ -46,7 +46,7 @@ def BE_loads(a,ap,r,dr,b,c):
 
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
     CT = (Fax*nb*r)/(0.5*rho*U0**2*2*np.pi*r*dr)
-    ap = (Faz*nb)/(2*rho*(2*np.pi*r)*U0*(1-a)*r*omega)
+    ap = (Faz*nb)/(2*rho*(2*np.pi*r)*U0*(1+a)*r*omega) #1-a
 
     a = 0.5 - 0.5*np.sqrt(1-CT)
     if Glauert:
@@ -56,6 +56,15 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
             a = 1+ (CT-CT1)/(4*np.sqrt(CT1)-4)
 
     if Prandlt:
+        mu = r/R
+        l = omega*R/U0
+        p1 = -nb/2*(1-mu)/(mu)*np.sqrt(1+(l**2*mu**2)/(1-a)**2)
+        ftip = 2/np.pi * np.arccos(np.exp(p1))
+        p2 = -nb/2*(mu-r_hub/R)/(mu)*np.sqrt(1+(l**2*mu**2)/(1-a)**2)
+        froot = 2/np.pi * np.arccos(np.exp(p2))
+        ftot = ftip + froot
+        a = a/ftot
+        ap = ap/ftot
 
     return a,ap
 
@@ -72,6 +81,7 @@ if __name__=='__main__':
         h = 2000 #m
         nb = 3 #number of blades
         n = 50 #number of discretised blade elements
+        rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
         r_arr_cos,dr_cos = geometry_cosine()
         r_arr_con,dr_con = geometry_constant()
 

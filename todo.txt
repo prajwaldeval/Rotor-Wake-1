@@ -2,7 +2,6 @@ SHORT introduction (1 page)
 A flowchart of your code (1 page)
 Main assumptions with an explanation of their impact (max. 1 page)
 Plots with explanation of results (alpha/inflow/a/a’/Ct/Cn/Cq vs r/R)
-    ##What is Cq????
 Spanwise distribution of angle of attack and inflow angle
 Spanwise distribution of axial and azimuthal inductions
 Spanwise distribution of thrust and azimuthal loading
