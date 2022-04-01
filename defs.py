@@ -37,15 +37,15 @@ def geometry_constant():
 
 def aero_coeffs(alpha,filename = 'ARAD8pct_polar.txt'):
     data = np.genfromtxt(filename,skip_header=2)
-    cl = np.interp(alpha,data[:,0].data[:,1])
-    cd = np.interp(alpha,data[:,0].data[:,2])
+    cl = np.interp(alpha,data[:,0],data[:,1])
+    cd = np.interp(alpha,data[:,0],data[:,2])
     return cl, cd
 
 def BE_loads(a,ap,r,dr,b,c):
     Vtan = RPM*r*(1+ap)
     Vax = U0*(1+a) #1-a
     Vps= Vtan**2+Vax**2
-    phi = np.atan(Vax,Vtan)
+    phi = np.arctan(Vax/Vtan)
     b = b + b_col
     alpha = - phi + b
     cl, cd = aero_coeffs(alpha)
@@ -57,8 +57,8 @@ def BE_loads(a,ap,r,dr,b,c):
     return Vax,Vtan,Fax,Faz,gamma
 
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
-    CT = (Fax*nb*r)/(0.5*rho*U0**2*2*np.pi*r*dr)
-    ap = (Faz*nb)/(2*rho*(2*np.pi*r)*U0*(1+a)*r*omega) #1-a
+    CT = (Fax*nb*dr)/(0.5*rho*U0**2*2*np.pi*r*dr)
+
 
     a = 0.5 - 0.5*np.sqrt(1-CT)
     if Glauert:
@@ -66,8 +66,8 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
         CT2 = 2*np.sqrt(CT1) - CT1
         if CT>=CT2:
             a = 1+ (CT-CT1)/(4*np.sqrt(CT1)-4)
-
-    if Prandlt:
+    ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0 * (1 + a) * r * omega)  # 1-a
+    if Prandtl:
         mu = r/R
         l = omega*R/U0
         p1 = -nb/2*(1-mu)/(mu)*np.sqrt(1+(l**2*mu**2)/(1-a)**2)
@@ -121,5 +121,6 @@ if __name__=='__main__':
         rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
         r_arr_cos,dr_cos = geometry_cosine()
         r_arr_con,dr_con = geometry_constant()
+
 
 

@@ -11,3 +11,4 @@ b = twist(r_cos/R)
 
 for i in range(len(r_cos)):
     a,ap,Fax,Faz,gamma = solve_anul(U0,r_cos[i],dr_cos[i],c[i],b[i])
+    print(a,ap)
