@@ -6,7 +6,7 @@ R = 50 #m
 r_hub = 0.2*R
 pitch = -2 #deg
 U0 = 10 #m/s
-TSR = 6
+TSR = 8
 omega= U0*TSR/R #rad/s
 nb = 3 #number of blades
 n = 50 #number of discretised blade elements
@@ -67,7 +67,11 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
         a1 = 1 - np.sqrt(CT1)/2
         if a > a1:
             CT = CT1 - 4*(np.sqrt(CT1)-1)*(1-a)
-            a = a = 0.5 - 0.5*np.sqrt(1-CT)
+            if CT<CT2:
+                a = 0.5 - 0.5 * np.sqrt(1 - CT)
+            else:
+                a = 1 + (CT - CT1)/(4*np.sqrt(CT1)-4)
+
 
     ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0**2 * (1 - a) * r * omega)  # 1-a
     if Prandtl:
@@ -77,7 +81,9 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
         ftip = 2/np.pi * np.arccos(np.exp(p1))
         p2 = -nb/2*(mu-r_hub/R)/(mu)*np.sqrt(1+(l**2*mu**2)/(1-a)**2)
         froot = 2/np.pi * np.arccos(np.exp(p2))
-        ftot = ftip + froot
+        ftot = ftip * froot
+        if (ftot < 0.0001):
+            ftot = 0.0001
         a = a/ftot
         ap = ap/ftot
 
@@ -112,20 +118,5 @@ def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
         ap = apnext
 
     return a,ap,Fax,Faz,gamma
-
-
-# if __name__=='__main__':
-#         R = 0.7 #m
-#         r_hub = 0.25*R
-#         b_col = 46 #deg
-#         U0 = 60 #m/s
-#         RPM = 1200
-#         omega=RPM*2*np.pi/60 #rad/s
-#         nb = 3 #number of blades
-#         n = 50 #number of discretised blade elements
-#         rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
-#         r_arr_cos,dr_cos = geometry_cosine()
-#         r_arr_con,dr_con = geometry_constant()
-
 
 
