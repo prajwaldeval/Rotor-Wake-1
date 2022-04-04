@@ -12,13 +12,17 @@ nb = 3 #number of blades
 n = 50 #number of discretised blade elements
 rho = 1.225
 
+#constant for Glauert
+CT1 = 1.816
+CT2 = 2*np.sqrt(CT1) - CT1
+
 def chord(mu):
     return 3*(1-mu) +1
 
 def twist(mu):
     return 14*(1-mu) + pitch
 
-def geometry_cosine():
+def geometry_cosine(n):
     r = np.linspace(0,np.pi,n+1)
     r = (1-np.cos(r))/2
     blen = R-r_hub
@@ -27,14 +31,14 @@ def geometry_cosine():
     r = (r[1:]+r[:-1])/2
     return r, dr
 
-def geometry_constant():
+def geometry_constant(n):
     r = np.linspace(r_hub, R, n+1)
     dr = r[1:] - r[:-1]
     r = (r[1:] + r[:-1]) / 2
     return  r,dr
 
 
-def aero_coeffs(alpha,filename = 'polar DU95W180 (3).xlsx'):
+def aero_coeffs(alpha,filename = 'polar DU95W180.xlsx'):
     data = np.array(pd.read_excel(filename))[3:,:]
     data = np.array(data,dtype='float64')
     cl = np.interp(alpha,data[:,0],data[:,1])
@@ -56,14 +60,15 @@ def BE_loads(a,ap,r,dr,b,c):
     return Vax,Vtan,Fax,Faz,gamma
 
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
-    CT = (Fax*nb*dr)/(0.5*rho*U0**2*2*np.pi*r*dr)
+    CT = (Fax*nb*dr)/(0.5*rho*(U0**2)*2*np.pi*r*dr)
 
     a = 0.5 - 0.5*np.sqrt(1-CT)
     if Glauert:
-        CT1 = 1.816
-        CT2 = 2*np.sqrt(CT1) - CT1
-        if CT>=CT2:
-            a = 1+ (CT-CT1)/(4*np.sqrt(CT1)-4)
+        a1 = 1 - np.sqrt(CT1)/2
+        if a > a1:
+            CT = CT1 - 4*(np.sqrt(CT1)-1)*(1-a)
+            a = a = 0.5 - 0.5*np.sqrt(1-CT)
+
     ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0**2 * (1 - a) * r * omega)  # 1-a
     if Prandtl:
         mu = r/R
@@ -78,7 +83,7 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
 
     return a,ap
 
-def solve_anul(Uinf, r, dr, c, b):
+def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
 
     #initialization of variables
     a = 0.2   # axial induction factor
@@ -90,10 +95,13 @@ def solve_anul(Uinf, r, dr, c, b):
     for i in range(max_nr_iterations):
 
         Vax, Vtan, Fax, Faz, gamma = BE_loads(a,ap,r,dr,b,c)
-        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl=False, Glauert=False)
+        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl, Glauert)
 
         anext = 0.25*a + 0.75*an
         apnext = 0.25*ap + 0.75*apn
+
+        # anext = an
+        # apnext = apn
 
         if (np.abs(a-anext)<convergence_error):
             print('N =', i,'converged with a =', a, 'and ap =',ap)
