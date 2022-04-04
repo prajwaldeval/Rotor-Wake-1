@@ -5,10 +5,10 @@ from defs import *
 r_cos,dr_cos = geometry_cosine()
 r_con,dr_con = geometry_constant()
 
-c = chord(r_cos/R)
-b = twist(r_cos/R)
+c = chord(r_con/R)
+b = twist(r_con/R)
 
 
-for i in range(len(r_cos)):
-    a,ap,Fax,Faz,gamma = solve_anul(U0,r_cos[i],dr_cos[i],c[i],b[i])
-    print(a,ap)
+for i in range(len(r_con)):
+    a,ap,Fax,Faz,gamma = solve_anul(U0,r_con[i],dr_con[i],c[i],b[i])
+    print(i,'finished with a =',a)

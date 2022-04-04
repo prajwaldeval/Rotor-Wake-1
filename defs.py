@@ -1,22 +1,22 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
-R = 0.7 #m
-r_hub = 0.25*R
-b_col = 46 #deg
-U0 = 60 #m/s
-RPM = 1200
-omega=RPM*2*np.pi/60 #rad/s
-h = 2000 #m
+R = 50 #m
+r_hub = 0.2*R
+pitch = -2 #deg
+U0 = 10 #m/s
+TSR = 6
+omega= U0*TSR/R #rad/s
 nb = 3 #number of blades
 n = 50 #number of discretised blade elements
-rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
+rho = 1.225
 
 def chord(mu):
-    return 0.18 - 0.06*mu
+    return 3*(1-mu) +1
 
 def twist(mu):
-    return -50*mu + 35
+    return 14*(1-mu) + pitch
 
 def geometry_cosine():
     r = np.linspace(0,np.pi,n+1)
@@ -34,20 +34,19 @@ def geometry_constant():
     return  r,dr
 
 
-
-def aero_coeffs(alpha,filename = 'ARAD8pct_polar.txt'):
-    data = np.genfromtxt(filename,skip_header=2)
+def aero_coeffs(alpha,filename = 'polar DU95W180 (3).xlsx'):
+    data = np.array(pd.read_excel(filename))[3:,:]
+    data = np.array(data,dtype='float64')
     cl = np.interp(alpha,data[:,0],data[:,1])
     cd = np.interp(alpha,data[:,0],data[:,2])
     return cl, cd
 
 def BE_loads(a,ap,r,dr,b,c):
-    Vtan = RPM*r*(1+ap)
-    Vax = U0*(1+a) #1-a
+    Vtan = omega*r*(1+ap)
+    Vax = U0*(1-a) #1-a
     Vps= Vtan**2+Vax**2
-    phi = np.arctan(Vax/Vtan)
-    b = b + b_col
-    alpha = - phi + b
+    phi = np.arctan2(Vax,Vtan)
+    alpha = phi*180/np.pi - b
     cl, cd = aero_coeffs(alpha)
     L = 0.5*c*rho*Vps*cl
     D = 0.5*c*rho*Vps*cd
@@ -59,14 +58,13 @@ def BE_loads(a,ap,r,dr,b,c):
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
     CT = (Fax*nb*dr)/(0.5*rho*U0**2*2*np.pi*r*dr)
 
-
     a = 0.5 - 0.5*np.sqrt(1-CT)
     if Glauert:
         CT1 = 1.816
         CT2 = 2*np.sqrt(CT1) - CT1
         if CT>=CT2:
             a = 1+ (CT-CT1)/(4*np.sqrt(CT1)-4)
-    ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0 * (1 + a) * r * omega)  # 1-a
+    ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0**2 * (1 - a) * r * omega)  # 1-a
     if Prandtl:
         mu = r/R
         l = omega*R/U0
@@ -83,44 +81,43 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
 def solve_anul(Uinf, r, dr, c, b):
 
     #initialization of variables
-    a = 0   # axial induction factor
+    a = 0.2   # axial induction factor
     ap = 0  # tangential induction factor
 
-    convergence_error = 0.00001
+    convergence_error = 0.0001
     max_nr_iterations = 100
 
     for i in range(max_nr_iterations):
 
         Vax, Vtan, Fax, Faz, gamma = BE_loads(a,ap,r,dr,b,c)
-        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl=True, Glauert=True)
+        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl=False, Glauert=False)
 
         anext = 0.25*a + 0.75*an
         apnext = 0.25*ap + 0.75*apn
 
         if (np.abs(a-anext)<convergence_error):
-            print(i)
+            print('N =', i,'converged with a =', a, 'and ap =',ap)
             break
-        if i==max_nr_iterations:
-            print('not conveerged')
+        if i==max_nr_iterations-1:
+            print('Not converged')
         a = anext
         ap = apnext
 
     return a,ap,Fax,Faz,gamma
 
 
-if __name__=='__main__':
-        R = 0.7 #m
-        r_hub = 0.25*R
-        b_col = 46 #deg
-        U0 = 60 #m/s
-        RPM = 1200
-        omega=RPM*2*np.pi/60 #rad/s
-        h = 2000 #m
-        nb = 3 #number of blades
-        n = 50 #number of discretised blade elements
-        rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
-        r_arr_cos,dr_cos = geometry_cosine()
-        r_arr_con,dr_con = geometry_constant()
+# if __name__=='__main__':
+#         R = 0.7 #m
+#         r_hub = 0.25*R
+#         b_col = 46 #deg
+#         U0 = 60 #m/s
+#         RPM = 1200
+#         omega=RPM*2*np.pi/60 #rad/s
+#         nb = 3 #number of blades
+#         n = 50 #number of discretised blade elements
+#         rho = 1.00649 #kg/m3 at 2000m altitude (ISA)
+#         r_arr_cos,dr_cos = geometry_cosine()
+#         r_arr_con,dr_con = geometry_constant()
 
 
 
