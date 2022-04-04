@@ -2,14 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+TSR = 10
+n = 100 #number of discretised blade elements
+
 R = 50 #m
 r_hub = 0.2*R
 pitch = -2 #deg
 U0 = 10 #m/s
-TSR = 8
 omega= U0*TSR/R #rad/s
 nb = 3 #number of blades
-n = 50 #number of discretised blade elements
 rho = 1.225
 
 #constant for Glauert
@@ -57,7 +58,8 @@ def BE_loads(a,ap,r,dr,b,c):
     Faz = L*np.sin(phi) - D*np.cos(phi)
     Fax = L*np.cos(phi) + D*np.sin(phi)
     gamma = 0.5 * np.sqrt(Vps) * cl * c  # vorticity
-    return Vax,Vtan,Fax,Faz,gamma
+    phi = phi*180/np.pi
+    return Vax,Vtan,Fax,Faz,gamma,phi,alpha
 
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
     CT = (Fax*nb*dr)/(0.5*rho*(U0**2)*2*np.pi*r*dr)
@@ -100,7 +102,7 @@ def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
 
     for i in range(max_nr_iterations):
 
-        Vax, Vtan, Fax, Faz, gamma = BE_loads(a,ap,r,dr,b,c)
+        Vax, Vtan, Fax, Faz, gamma,phi,alpha = BE_loads(a,ap,r,dr,b,c)
         an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl, Glauert)
 
         anext = 0.25*a + 0.75*an
@@ -117,6 +119,6 @@ def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
         a = anext
         ap = apnext
 
-    return a,ap,Fax,Faz,gamma
+    return a,ap,Fax,Faz,gamma, phi, alpha
 
 
