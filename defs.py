@@ -2,15 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-TSR = 8
-TSRar = np.arange(5,11)
-n = 50 #number of discretised blade elements
+# TSR = 10
+n = 100 #number of discretised blade elements
 
 R = 50 #m
 r_hub = 0.2*R
 pitch = -2 #deg
 U0 = 10 #m/s
-omega= U0*TSR/R #rad/s
+# omega= U0*TSR/R #rad/s
 nb = 3 #number of blades
 rho = 1.225
 
@@ -47,7 +46,7 @@ def aero_coeffs(alpha,filename = 'polar DU95W180.xlsx'):
     cd = np.interp(alpha,data[:,0],data[:,2])
     return cl, cd
 
-def BE_loads(a,ap,r,dr,b,c):
+def BE_loads(a,ap,r,dr,b,c,omega):
     Vtan = omega*r*(1+ap)
     Vax = U0*(1-a) #1-a
     Vps= Vtan**2+Vax**2
@@ -62,19 +61,21 @@ def BE_loads(a,ap,r,dr,b,c):
     phi = phi*180/np.pi
     return Vax,Vtan,Fax,Faz,gamma,phi,alpha,cl,cd
 
-def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
+def MT_induction(Fax,Faz,r,dr,b,c,Prandtl,Glauert,omega):
     CT = (Fax*nb*dr)/(0.5*rho*(U0**2)*2*np.pi*r*dr)
 
     a = 0.5 - 0.5*np.sqrt(1-CT)
+    # print(a)
     if Glauert:
         a1 = 1 - np.sqrt(CT1)/2
-        if a > a1:
+        if a < a1:
             CT = CT1 - 4*(np.sqrt(CT1)-1)*(1-a)
             if CT<CT2:
                 a = 0.5 - 0.5 * np.sqrt(1 - CT)
             else:
-                print('Using Glauert')
+                print('Using Glauert', a, '!!!!')
                 a = 1 + (CT - CT1)/(4*np.sqrt(CT1)-4)
+                print(a)
 
 
     ap = (Faz * nb) / (2 * rho * (2 * np.pi * r) * U0**2 * (1 - a) * r * omega)  # 1-a
@@ -93,7 +94,7 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
 
     return a,ap
 
-def solve_anul(Uinf, r, dr, c, b,Prandtl ,Glauert):
+def solve_anul(Uinf, r, dr, c, b,Prandtl ,Glauert,omega):
 
     #initialization of variables
     a = 0.2   # axial induction factor
@@ -104,8 +105,8 @@ def solve_anul(Uinf, r, dr, c, b,Prandtl ,Glauert):
 
     for i in range(max_nr_iterations):
 
-        Vax, Vtan, Fax, Faz, gamma,phi,alpha,cl,cd = BE_loads(a,ap,r,dr,b,c)
-        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl, Glauert)
+        Vax, Vtan, Fax, Faz, gamma,phi,alpha,cl,cd = BE_loads(a,ap,r,dr,b,c,omega)
+        an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl, Glauert,omega)
 
         anext = 0.25*a + 0.75*an
         apnext = 0.25*ap + 0.75*apn
@@ -114,12 +115,12 @@ def solve_anul(Uinf, r, dr, c, b,Prandtl ,Glauert):
         # apnext = apn
 
         if (np.abs(a-anext)<convergence_error):
-            print('N =', i,'converged with a =', a, 'and ap =',ap, 'and r=', r/R)
+            # print('N =', i,'converged with a =', a, 'and ap =',ap, 'and r=', r/R)
             break
         if i==max_nr_iterations-1:
-            print('Not converged and r=', r/R)
-        a = anext
-        ap = apnext
+            # print('Not converged and r=', r/R)
+            a = anext
+            ap = apnext
 
     return a,ap,Fax,Faz,gamma, phi, alpha, cl, cd
 
@@ -144,7 +145,7 @@ def areas(a,r,dr):
         a4[i - 1] = np.pi * (r4[i] ** 2 - r4[i - 1] ** 2)
     return r1,r23,r4,a1,a23,a4
 
-def enthalpy_jump(a23,r23,Fax):
+def enthalpy_jump(a23,Fax):
     f = Fax/a23
     jump = f/rho
     return -1*jump

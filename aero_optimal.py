@@ -14,3 +14,7 @@ cd_opt = cd[clcd==opt]
 alpha_opt = alpha[clcd==opt]
 
 
+plt.plot(alpha,clcd)
+plt.grid()
+plt.xlabel(r'$\alpha [^\circ]$')
+plt.ylabel(r'$C_{l}/C_{d}$')
