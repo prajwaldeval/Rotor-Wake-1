@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-TSR = 10
-n = 100 #number of discretised blade elements
+TSR = 8
+TSRar = np.arange(5,11)
+n = 50 #number of discretised blade elements
 
 R = 50 #m
 r_hub = 0.2*R
@@ -59,7 +60,7 @@ def BE_loads(a,ap,r,dr,b,c):
     Fax = L*np.cos(phi) + D*np.sin(phi)
     gamma = 0.5 * np.sqrt(Vps) * cl * c  # vorticity
     phi = phi*180/np.pi
-    return Vax,Vtan,Fax,Faz,gamma,phi,alpha
+    return Vax,Vtan,Fax,Faz,gamma,phi,alpha,cl,cd
 
 def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
     CT = (Fax*nb*dr)/(0.5*rho*(U0**2)*2*np.pi*r*dr)
@@ -72,6 +73,7 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
             if CT<CT2:
                 a = 0.5 - 0.5 * np.sqrt(1 - CT)
             else:
+                print('Using Glauert')
                 a = 1 + (CT - CT1)/(4*np.sqrt(CT1)-4)
 
 
@@ -91,7 +93,7 @@ def MT_induction(Fax,Faz,r,dr,b,c,Glauert,Prandtl):
 
     return a,ap
 
-def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
+def solve_anul(Uinf, r, dr, c, b,Prandtl ,Glauert):
 
     #initialization of variables
     a = 0.2   # axial induction factor
@@ -102,7 +104,7 @@ def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
 
     for i in range(max_nr_iterations):
 
-        Vax, Vtan, Fax, Faz, gamma,phi,alpha = BE_loads(a,ap,r,dr,b,c)
+        Vax, Vtan, Fax, Faz, gamma,phi,alpha,cl,cd = BE_loads(a,ap,r,dr,b,c)
         an, apn = MT_induction(Fax,Faz,r,dr,b,c, Prandtl, Glauert)
 
         anext = 0.25*a + 0.75*an
@@ -112,13 +114,43 @@ def solve_anul(Uinf, r, dr, c, b, Prandtl ,Glauert):
         # apnext = apn
 
         if (np.abs(a-anext)<convergence_error):
-            print('N =', i,'converged with a =', a, 'and ap =',ap)
+            print('N =', i,'converged with a =', a, 'and ap =',ap, 'and r=', r/R)
             break
         if i==max_nr_iterations-1:
-            print('Not converged')
+            print('Not converged and r=', r/R)
         a = anext
         ap = apnext
 
-    return a,ap,Fax,Faz,gamma, phi, alpha
+    return a,ap,Fax,Faz,gamma, phi, alpha, cl, cd
+
+def areas(a,r,dr):
+    r23 = np.zeros(len(r)+1)
+    r23[:-1]=r-0.5*dr
+    r23[-1]=r[-1]+0.5*dr[-1]
+    r1 = np.zeros(len(r23))
+    r4 = np.zeros(len(r23))
+    r1[0] = r23[0]
+    r4[0] = r23[0]
+    a23 = np.zeros(len(r))
+    a1 = np.zeros(len(r))
+    a4 = np.zeros(len(r))
+
+    for i in range(1,len(r)+1):
+        r1[i] = np.sqrt( (1 - a[i - 1]) * (r23[i] ** 2 - r23[i - 1] ** 2) + r1[i - 1] ** 2 )
+        r4[i] = np.sqrt( ((1 - a[i - 1]) * (r23[i] ** 2 - r23[i - 1] ** 2))/(1 - 2 * a[i-1]) + r4[i - 1] ** 2)
+        print('r1=',r1[i],', r23=', r23[i], ', r4=', r4[i])
+        a1[i-1] = np.pi*(r1[i]**2-r1[i-1]**2)
+        a23[i-1] = np.pi*(r23[i]**2-r23[i-1]**2)
+        a4[i - 1] = np.pi * (r4[i] ** 2 - r4[i - 1] ** 2)
+    return r1,r23,r4,a1,a23,a4
+
+def enthalpy_jump(a23,r23,Fax):
+    f = Fax/a23
+    jump = f/rho
+    return -1*jump
+
+
+
+
 
 
